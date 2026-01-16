@@ -1,0 +1,168 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Demanda {
+  id                    String   @id @default(uuid())
+  emailSolicitante      String
+  demandaDetalhe        String
+  pessoaSolicitante     String
+  secretariaSolicitante String
+  destino               String
+  dataHoraIda           String
+  dataHoraVolta         String
+  origem                String
+  contato               String
+  statusDemanda         String   @default("Aguardando")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  lotacao               Int?
+  kmRodado              Int?
+  recurso               String?
+  categoria             String?
+
+  veiculoId String?
+  veiculo   Veiculo? @relation(fields: [veiculoId], references: [id], onDelete: SetNull)
+
+  motoristaId String?
+  motorista   Motorista? @relation(fields: [motoristaId], references: [id], onDelete: SetNull)
+
+  secretariaId String?
+  secretaria   Secretaria? @relation(fields: [secretariaId], references: [id], onDelete: SetNull)
+}
+
+model Veiculo {
+  id                  String @id @default(uuid())
+  placaVeiculo        String @unique
+  chassiVeiculo       String
+  renavamVeiculo      String
+  proprietarioVeiculo String
+  crlvVeiculo         String
+
+  secretariaId String
+  secretaria   Secretaria @relation(fields: [secretariaId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  modeloId String?
+  modelo   VeiculoModelo? @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+
+  demandas Demanda[]
+}
+
+model VeiculoModelo {
+  id     String @id @default(uuid())
+  modelo String
+
+  veiculos Veiculo[]
+}
+
+model Motorista {
+  id      String @id @default(uuid())
+  nome    String
+  contato String
+
+  demandas Demanda[]
+
+  secretariaId String
+  secretaria   Secretaria @relation(fields: [secretariaId], references: [id], onDelete: Cascade)
+}
+
+model Acesso {
+  id    String @id @default(uuid())
+  nivel String
+
+  user User[]
+}
+
+model Secretaria {
+  id   String @id @default(uuid())
+  nome String @unique
+
+  demandas  Demanda[]
+  users     UserSecretaria[]
+  veiculos  Veiculo[]
+  motorista Motorista[]
+}
+
+model UserSecretaria {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  secretariaId String
+  secretaria   Secretaria @relation(fields: [secretariaId], references: [id], onDelete: Cascade)
+
+  @@id([userId, secretariaId])
+  @@map("user_on_secretaria")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  createdAt     DateTime @default(now())
+  emailVerified Boolean  @default(false)
+  image         String?
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  acesso      Acesso[]
+  sessions    Session[]
+  accounts    Account[]
+  veiculos    Veiculo[]
+  secretarias UserSecretaria[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
